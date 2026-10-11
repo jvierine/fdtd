@@ -1,0 +1,218 @@
+\documentclass[10pt]{article}
+% Memo style embedded from /Users/jvi019/src/mm_memos/mmmemo.sty.
+\makeatletter
+%% mmmemo.sty -- compact technical-memorandum style
+%% Inspired by the direct, utilitarian structure of the MIT Haystack
+%% Observatory EDGES memo series. No MIT or Haystack branding is reproduced.
+
+\RequirePackage[letterpaper,top=0.58in,bottom=0.62in,left=0.72in,right=0.72in]{geometry}
+\RequirePackage[T1]{fontenc}
+\RequirePackage{newtxtext}
+\RequirePackage{newtxmath}
+\RequirePackage{microtype}
+\RequirePackage{graphicx}
+\RequirePackage{booktabs}
+\RequirePackage{siunitx}
+\RequirePackage{amsmath}
+\RequirePackage{enumitem}
+\RequirePackage{needspace}
+\RequirePackage{caption}
+\RequirePackage{fancyhdr}
+\RequirePackage[hidelinks]{hyperref}
+\RequirePackage{xcolor}
+
+\definecolor{mmrule}{gray}{0.25}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.48em plus 0.12em minus 0.08em}
+\setlist{nosep,leftmargin=1.35em}
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
+\setlength{\floatsep}{9pt plus 2pt minus 2pt}
+\captionsetup{font=small,labelfont=bf,skip=4pt}
+\sisetup{detect-all,per-mode=symbol,range-phrase=--}
+
+\newif\ifscriptprovenance
+\scriptprovenancetrue
+\newcommand{\showscriptprovenance}{\scriptprovenancetrue}
+\newcommand{\hidescriptprovenance}{\scriptprovenancefalse}
+\newcommand{\scriptprovenance}[1]{%
+  \ifscriptprovenance\par\vspace{1pt}{\footnotesize\itshape Script: \texttt{#1}.}\fi}
+
+\newcommand{\mmseries}{MICROMETEORITE MODELING MEMO SERIES}
+\newcommand{\mminstitution}{UIT THE ARCTIC UNIVERSITY OF NORWAY}
+\newcommand{\mmlocation}{TROMS\O, NORWAY}
+\newcommand{\mmmemonumber}{}
+\newcommand{\mmdate}{}
+\newcommand{\mmto}{}
+\newcommand{\mmfrom}{}
+\newcommand{\mmsubject}{}
+\newcommand{\mmlogofile}{assets/uit-circular-logo.pdf}
+\newcommand{\setmmlogo}[1]{\renewcommand{\mmlogofile}{#1}}
+
+\newcommand{\mmmemo}[5]{%
+  \renewcommand{\mmmemonumber}{#1}%
+  \renewcommand{\mmdate}{#2}%
+  \renewcommand{\mmto}{#3}%
+  \renewcommand{\mmfrom}{#4}%
+  \renewcommand{\mmsubject}{#5}%
+}
+
+\newcommand{\makemmmemo}{%
+  \thispagestyle{fancy}%
+  \begin{minipage}[t]{0.62\textwidth}
+    \begin{minipage}[c]{0.16\textwidth}
+      \IfFileExists{\mmlogofile}{\includegraphics[width=0.62in]{\mmlogofile}}{}
+    \end{minipage}\hspace{0.02\textwidth}%
+    \begin{minipage}[c]{0.80\textwidth}
+      \raggedright\bfseries
+      \mminstitution\\[-1pt]
+      \mmseries\\[-1pt]
+      \mmlocation
+    \end{minipage}
+  \end{minipage}%
+  \hfill
+  \begin{minipage}[t]{0.34\textwidth}
+    \raggedleft\bfseries MM MEMO \#\mmmemonumber\\[2pt]
+    \normalfont\mmdate
+  \end{minipage}
+  \par\vspace{0.42em}\hrule height 0.7pt\vspace{0.48em}
+  \begin{tabular}{@{}p{0.72in}p{\dimexpr\textwidth-0.72in-2\tabcolsep\relax}@{}}
+    \textbf{To:} & \mmto\\
+    \textbf{From:} & \mmfrom\\
+    \textbf{Subject:} & \textbf{\mmsubject}
+  \end{tabular}
+  \par\vspace{0.35em}\hrule height 0.35pt\vspace{0.5em}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize MM MEMO \#\mmmemonumber}
+\fancyhead[R]{\footnotesize\mmsubject}
+\fancyfoot[C]{\footnotesize\thepage}
+\renewcommand{\headrulewidth}{0.35pt}
+\renewcommand{\footrulewidth}{0pt}
+\setlength{\headheight}{13.5pt}
+
+\newcommand{\mmsection}[1]{%
+  \Needspace{4\baselineskip}\par\vspace{0.45em}{\bfseries #1}\par\vspace{-0.12em}%
+}
+
+\newenvironment{mmconclusion}
+  {\par\medskip\hrule\smallskip\textbf{Conclusion.}\ }
+  {\par\smallskip\hrule\medskip}
+
+\makeatother
+
+\IfFileExists{memos/assets/uit-circular-logo.pdf}{\setmmlogo{memos/assets/uit-circular-logo.pdf}}{\setmmlogo{assets/uit-circular-logo.pdf}}
+\mmmemo{005}{October 11, 2026}{Micrometeorite modeling group}{Juha-Pekka Vierinen}{Zenith-angle normalization of ablation peak heights}
+% Toggle implementation provenance with \hidescriptprovenance.
+\begin{document}
+\makemmmemo
+
+\textbf{Proposal.} Normalize the altitude of peak mass loss to a common
+trajectory zenith angle of $45^\circ$. An equal atmospheric-column correction
+is a useful first approximation. A correction table from the full thermal
+ablation model performs better in the numerical experiment below. Only
+ablation is calculated; interpreting initial radar detection heights remains
+a later observational test.
+
+\mmsection{Definition and first-order correction}
+Let $\chi$ be the \emph{meteor trajectory} angle from local vertical, not the
+radar beam zenith angle. Write $P=-dm/dt>0$ and define
+$h_p(\chi)$ as the height where $P$ reaches its maximum. For a plane-parallel
+atmosphere with mass density $\rho(h)$, define the vertical and traversed
+slant mass columns, in \si{kg.m^{-2}}, as
+\begin{equation}
+ X(h)=\int_h^\infty\rho(z)\,dz,\qquad
+ \Sigma(h,\chi)=\frac{X(h)}{\cos\chi}.
+\end{equation}
+If the peak occurs at approximately the same traversed column for all angles,
+map an observed or modelled peak to
+\begin{equation}\label{eq:column}
+ \boxed{h_{p,45}=X^{-1}\!\left[X(h_p)\frac{\cos45^\circ}{\cos\chi}\right].}
+\end{equation}
+For $\rho(h)\propto\exp(-h/H)$, this becomes
+\begin{equation}\label{eq:exp}
+ \boxed{h_{p,45}=h_p+H\ln\!\left(\frac{\cos\chi}{\cos45^\circ}\right).}
+\end{equation}
+An illustrative $H=\SI{6}{km}$ shifts vertical-entry peaks upward by
+\SI{2.08}{km}, leaves $45^\circ$ peaks unchanged, and shifts $60^\circ$
+peaks downward by \SI{2.08}{km}. For MSIS, use the numerical column in
+Eq.~\eqref{eq:column} rather than one constant scale height.
+
+The approximation has a physical basis. In an energy-limited model,
+$P=\Lambda A\rho v^3/(2L)$ and $d\Sigma/dt=\rho v$. Neglecting gravity,
+$dm/d\Sigma$ and $dv/d\Sigma$ have no explicit $\chi$ dependence. In an
+exponential atmosphere, $\rho=\Sigma\cos\chi/H$, so
+$P(\Sigma,\chi)=\cos\chi\,F(\Sigma)$ for otherwise identical grains.
+The maximizing column is independent of angle, giving
+Eq.~\eqref{eq:exp}. Its ideal peak-rate scaling is also
+$P_{p,45}\simeq P_p\cos45^\circ/\cos\chi$.
+The full thermal model includes finite heating time, radiative cooling,
+temperature-dependent evaporation and changing scale height; therefore the
+column equivalence need not be exact.
+
+\newpage
+\mmsection{Check using the native Rust ablation model}
+We compared 100, 300, 500, 700, 900 and 1100~\si{\micro m} diameters;
+20, 40 and \SI{70}{km.s^{-1}} initial speeds; and zenith angles
+$0,15,30,45,60,70^\circ$: 108 trajectories. All use the same stony thermal
+parameters, \SI{3300}{kg.m^{-3}} bulk density, and MSIS~2.1 atmosphere at
+$69.3^\circ$~N, $16.04^\circ$~E on June 28, 2018, 12:45:33 UTC.
+Peaks are locally interpolated from samples separated by at most
+\SI{25}{m} in height. Each case is compared with its own actual $45^\circ$
+model peak, holding diameter and initial speed fixed.
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Correction & RMS height error (km) & Maximum error (km)\\
+\midrule
+None & 1.685 & 4.578\\
+Equal MSIS mass column & 0.484 & 2.148\\
+Model table, held-out diameter & 0.159 & 0.525\\
+\bottomrule
+\end{tabular}
+\end{center}
+\scriptprovenance{examples/normalize\_ablation\_zenith.py; src/bin/meteor-ablation.rs}
+
+Thus the column correction reduces pooled RMS differences by a factor
+of about 3.5, but does not remove all angle dependence. The worst corrected
+case is a \SI{100}{\micro m} grain at \SI{70}{km.s^{-1}} and
+$70^\circ$ entry. Halving its height step to \SI{12.5}{m}, and that of its
+$45^\circ$ reference, shifts either peak by less than \SI{0.8}{m}; its
+\SI{2.15}{km} residual is not explained by peak sampling.
+
+\mmsection{Preferred correction for a height--speed histogram}
+For each fixed $v_0,d,\chi$, compute $h_p$ from ablation alone and tabulate
+\begin{equation}
+ \Delta h(v_0,d,\chi)=h_p(v_0,d,45^\circ)-h_p(v_0,d,\chi).
+\end{equation}
+Apply $h_{p,45}=h_p+\Delta h$. If diameter is unknown, use a stated
+population weighting over diameter, or a provisional median correction
+$\widehat{\Delta h}(v_0,\chi)$. The last table row predicts each diameter
+using the median correction from the other five diameters. It tests size
+transfer within these model cases; interpolation in speed, different materials
+and real detection heights have not been validated. Equal weighting of these
+six nodes is not an inferred meteoroid size distribution.
+
+For neutral-density studies, retain the original heights and use one specified
+reference atmosphere consistently across the samples being compared. In the
+exponential limit, a multiplicative density change $f$ shifts the normalized
+peak by $\delta h=H\ln f$; this geometric normalization preserves that signal.
+Measure the width of the corrected height distribution within narrow speed
+bins and check for remaining zenith-angle trends. Angular uncertainty alone
+contributes approximately $H\tan\chi\,\sigma_\chi$ to height uncertainty
+($\sigma_\chi$ in radians). Near-horizontal trajectories require curved-path
+columns; the plane-parallel test here stops at $70^\circ$.
+
+\textbf{Recommendation.} Start with Eq.~\eqref{eq:column}, then use the
+ablation-derived correction table if its residual angle dependence is smaller.
+The result supports a tighter \emph{model ablation-peak} distribution;
+reduction of the observed initial-detection-height width is still to be tested.
+
+\vspace{2pt}
+{\footnotesize Atmospheric model: Emmert et al. (2021),
+\href{https://doi.org/10.1029/2020EA001321}{NRLMSIS 2.0} (MSIS 2.1 used here).
+Observational motivation: Huyghebaert et al. (2026),
+\href{https://doi.org/10.5194/amt-19-4277-2026}{MAARSY neutral-density variations}.}
+\end{document}
