@@ -13,6 +13,7 @@ from pathlib import Path
 import subprocess
 import urllib.request
 import zipfile
+from functools import lru_cache
 import h5py
 import numpy as np
 from scipy.constants import c,epsilon_0,m_e,e
@@ -28,6 +29,7 @@ COLLISION=5.61e-19*40**(-.8)
 LENGTH=VT/(NA*COLLISION*U)
 
 
+@lru_cache(maxsize=4)
 def dimant_interpolator(cutoff):
     radial=np.geomspace(cutoff*1e-5,cutoff,160)
     mu=np.linspace(-1,1,81)
@@ -68,9 +70,13 @@ def archive_cases(directory):
     return {r['wpmax_label']:r for r in rows}
 
 
-def make_density(path,n,dx,pml,peak_shape,amplitude):
+def make_density(path,n,dx,pml,peak_shape,amplitude,support_override=None):
     """Analytic D-O sampled at native Yee edges; dimensional coordinates /lambda_T."""
     support=(n/2-pml-8)*dx
+    if support_override is not None:
+        if support_override>support or support_override<=2*dx:
+            raise ValueError('Requested plasma support does not fit inside the box')
+        support=support_override
     cutoff=np.sqrt(3)*support/LENGTH
     radial,scale,interpolate=dimant_interpolator(cutoff)
     density=np.memmap(path,dtype='<f8',mode='w+',shape=(3,n,n,n))
@@ -110,6 +116,7 @@ def main():
     p.add_argument('--threads',type=int,default=8)
     p.add_argument('--periods',type=float,default=2.)
     p.add_argument('--collision-rate',type=float,default=0.)
+    p.add_argument('--support-radius',type=float,default=None)
     p.add_argument('--output',type=Path,default=ROOT/'outputs/sugar_reproduction')
     args=p.parse_args()
     if args.n%2 or args.n<64:
@@ -123,6 +130,8 @@ def main():
     for key in args.wpmax:
         case=cases[key]
         name=f"wp{key:g}_n{args.n}_cpw{args.cells_per_wavelength:g}_{args.normalization}_T{args.periods:g}_nu{args.collision_rate:g}"
+        if args.support_radius is not None:
+            name+=f'_support{args.support_radius:g}'
         output=args.output/(name+'.h5')
         if output.exists():
             print('Already saved',output,flush=True)
@@ -136,7 +145,7 @@ def main():
             source=case['archive_ablation_rate_particles_s']/(4*np.sqrt(2*np.pi)*VT)
             amplitude=8*np.pi*source*NA*(1+3.8e-26/4.7e-26)*(COLLISION*BETA/(4*np.pi))/(np.sqrt(3)*LENGTH)
         density_path=args.output/(name+'.density.bin')
-        support,maximum,axis,slice_=make_density(density_path,args.n,dx,12,98.34240942139034/np.pi,amplitude)
+        support,maximum,axis,slice_=make_density(density_path,args.n,dx,12,98.34240942139034/np.pi,amplitude,args.support_radius)
         result_path=args.output/(name+'.json')
         config=dict(n=args.n,dx_m=dx,pml_cells=12,frequency_hz=FREQUENCY,
             collision_rate_s1=args.collision_rate,magnetic_field_t=[0.,0.,0.],polarization='linear',
