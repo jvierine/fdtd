@@ -28,7 +28,8 @@ def main():
     k=2*np.pi*f/c
     integral=np.sum(ne*np.exp(2j*k*x))*dx**3
     re=e**2/(4*np.pi*epsilon_0*m_e*c**2)
-    born=re**2*abs(integral)**2
+    # Radar cross section is 4*pi times the differential scattering cross section.
+    born=4*np.pi*re**2*abs(integral)**2
     args.output.parent.mkdir(parents=True,exist_ok=True)
     with h5py.File(args.output,'w') as h:
         h.attrs['source_program']=Path(__file__).read_text()
