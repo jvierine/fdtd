@@ -17,13 +17,27 @@ import h5py
 import numpy as np
 from scipy.constants import c,epsilon_0,m_e,e
 from scipy.io import loadmat
-from maarsy_rcs import dimant_interpolator, mpi_tools
+from scipy.interpolate import RegularGridInterpolator
+from dimant_oppenheim import electron_density
+from maarsy_rcs import mpi_tools
 
 ROOT=Path(__file__).resolve().parents[1]
 FREQUENCY=38.45e6
 U,VT,NA,BETA=40000.,951.,1e19,.7055413586
 COLLISION=5.61e-19*40**(-.8)
 LENGTH=VT/(NA*COLLISION*U)
+
+
+def dimant_interpolator(cutoff):
+    radial=np.geomspace(cutoff*1e-5,cutoff,160)
+    mu=np.linspace(-1,1,81)
+    table=np.array([[electron_density(r*u,r*np.sqrt(max(0,1-u*u)))
+                     for u in mu] for r in radial])
+    if not np.all(np.isfinite(table)) or np.min(table)<-1e-8:
+        raise ValueError('Invalid normalized D-O density')
+    scale=1e-10
+    return radial,scale,RegularGridInterpolator(
+        (np.log(radial),mu),np.log1p(np.maximum(table,0)/scale))
 
 
 def archive_cases(directory):
