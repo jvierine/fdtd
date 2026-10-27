@@ -69,6 +69,7 @@ def save_summary(output, tables, args):
     temporary=output/'lookup.partial.h5'
     with h5py.File(temporary,'w') as h:
         h.attrs.update(source_program=SOURCE,altitude_km=100.,
+            selected_velocity_indices=args.velocity_indices,selected_size_indices=args.size_indices,
             neutral_number_density_m3=args.neutral_density,
             atmosphere='MSIS2.1 Sanya 2024-04-22 18 UTC; original atmosphere unavailable',
             status='Sparse independent Maxwell calculation; not convergence-certified',
@@ -105,6 +106,8 @@ def main():
     p.add_argument('--neutral-density',type=float,default=1.247715306362518e19)
     p.add_argument('--ranks',type=int,default=4)
     p.add_argument('--threads',type=int,default=8)
+    p.add_argument('--velocity-indices',type=int,nargs='+',choices=range(4),default=list(range(4)))
+    p.add_argument('--size-indices',type=int,nargs='+',choices=range(4),default=list(range(4)))
     p.add_argument('--output',type=Path,default=ROOT/'outputs/tarnecki_sparse4x4_20261027')
     args=p.parse_args()
     if args.n < 64 or args.n%2 or min(args.cells_per_wavelength,args.periods,args.neutral_density,args.ranks,args.threads)<=0:
@@ -124,10 +127,12 @@ def main():
     shape=shared_shape()
     driver.dimant_interpolator=lambda cutoff: shape
     for i,speed in enumerate(VELOCITY):
+        if i not in args.velocity_indices:
+            continue
         length,_,collision,beta=plasma_parameters(speed,1.,args.neutral_density)
         driver.LENGTH=length
         for radar,frequency in RADARS.items():
-            if all((args.output/f'{radar}_v{i}_s{j}.h5').exists() for j in range(4)):
+            if all((args.output/f'{radar}_v{i}_s{j}.h5').exists() for j in args.size_indices):
                 continue
             dx=c/frequency/args.cells_per_wavelength
             cutoff=np.sqrt(3)*(args.n/2-20)*dx/length
@@ -137,6 +142,8 @@ def main():
             support,maximum,axis,slice_=driver.make_density(base_path,args.n,dx,12,np.inf,1.)
             base=np.memmap(base_path,dtype='<f8',mode='r',shape=(3,args.n,args.n,args.n))
             for j,size in enumerate(SIZES):
+                if j not in args.size_indices:
+                    continue
                 output=args.output/f'{radar}_v{i}_s{j}.h5'
                 if output.exists():
                     continue
@@ -174,7 +181,8 @@ def main():
                 print('SAVED',output,'RCS dBsm',10*np.log10(value),flush=True)
             del base
             base_path.unlink()
-    print('COMPLETE: 32 native FDTD cases; no dense parameter sweep.',flush=True)
+    count=len(set(args.velocity_indices))*len(set(args.size_indices))*len(RADARS)
+    print(f'COMPLETE: {count} native FDTD cases; no dense parameter sweep.',flush=True)
 
 
 if __name__=='__main__':
