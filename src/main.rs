@@ -5,6 +5,7 @@
 //! fields. The radiation integral of the induced current replaces surface NTF.
 use mpi::{collective::SystemOperation, topology::SimpleCommunicator, traits::*};
 use rayon::prelude::*;
+use meteor_fdtd::{current_rhs, current_next};
 use serde::{Deserialize, Serialize};
 use std::{
     env, fs,
@@ -422,10 +423,8 @@ fn run(
             let q = edge.component;
             let external = incident_plane[x_start + edge.index / (n * n) - 1][q];
             let total = external + electric[q][edge.index];
-            edge.rhs = (1.0 - damping) * plasma[q][edge.index] + dt * edge.wp * total;
-            if magnetized {
-                edge.rhs += 0.5 * dt * gyro_at(&plasma, edge.index, q, n, gyro);
-            }
+            edge.rhs = current_rhs(plasma[q][edge.index], edge.wp * total,
+                if magnetized { gyro_at(&plasma, edge.index, q, n, gyro) } else { 0.0 }, dt, damping);
         });
         // Matrix-free trapezoidal Lorentz solve. dt*|Omega| <= 0.7 makes
         // this contraction fast (typically five iterations for Earth's B).
@@ -434,13 +433,8 @@ fn run(
             let (error, scale) = edges
                 .par_iter_mut()
                 .map(|edge| {
-                    edge.next = (edge.rhs
-                        + if magnetized {
-                            0.5 * dt * gyro_at(&plasma, edge.index, edge.component, n, gyro)
-                        } else {
-                            0.0
-                        })
-                        / (1.0 + damping);
+                    edge.next = current_next(edge.rhs,
+                        if magnetized { gyro_at(&plasma, edge.index, edge.component, n, gyro) } else { 0.0 }, dt, damping);
                     (
                         (edge.next - plasma[edge.component][edge.index]).abs(),
                         edge.next.abs(),
