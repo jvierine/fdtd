@@ -75,3 +75,16 @@ pub fn advance_electric(
         }
     }
 }
+
+/// Full real-space Maxwell curl RHS in an x-z plane (all vector components).
+/// E and H=c B have common units; time and length use c=1. current is the
+/// electron charge current divided by epsilon_0 in the caller's normalization.
+/// Spatial derivatives may come from any charge-consistent discretization.
+pub fn maxwell_rhs_xz(
+    dx_e: [f64;3], dz_e: [f64;3], dx_h: [f64;3], dz_h: [f64;3],
+    current: [f64;3],
+) -> ([f64;3],[f64;3]) {
+    let ce=[-dz_e[1],dz_e[0]-dx_e[2],dx_e[1]];
+    let ch=[-dz_h[1],dz_h[0]-dx_h[2],dx_h[1]];
+    (std::array::from_fn(|i|ch[i]-current[i]),std::array::from_fn(|i|-ce[i]))
+}
